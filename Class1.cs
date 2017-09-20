@@ -43,7 +43,7 @@ namespace NoAutoAggression
             }
         }
 
-        // is called by NAASpawnManager in Start() usually when a new game is loaded
+        // is called by NAASpawnManager in Start() usually when a new game is loaded test
         public static void CreateAggressionStore()
         {
             // get our aggression
