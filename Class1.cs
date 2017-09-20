@@ -43,7 +43,7 @@ namespace NoAutoAggression
             }
         }
 
-        // is called by NAASpawnManager in Start() usually when a new game is loaded test
+        // is called by NAASpawnManager in Start() usually when a new game is loaded
         public static void CreateAggressionStore()
         {
             // get our aggression
@@ -215,7 +215,7 @@ namespace NoAutoAggression
         // dummy
         private IEnumerator DummyRoutune()
         {
-            yield break;
+            yield return true;
         }
 
         // random item spawn
@@ -265,19 +265,19 @@ namespace NoAutoAggression
                         myMutant.setup.search.updateCurrentWaypoint(myMutant.setup.currentWaypoint.transform.position);
                         myMutant.setup.search.setToWaypoint();
                         if (NoAutoAggression.debugScenes) ModAPI.Log.Write("Scene0 finished!");
-                        //yield break;
+                        yield return true;
                     }
                     else
                     {
                         if (NoAutoAggression.debugScenes) ModAPI.Log.Write("no suitable enemies");
-                        yield break;
+                        yield return true;
                     }
                 }
             }
             else
             {
                 if (NoAutoAggression.debugScenes) ModAPI.Log.Write("no suitable enemies");
-                yield break;
+                yield return true;
             }
         }
     }
