@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using TheForest.Utils.Settings;
-using System.Collections;
 
 namespace NoAutoAggression
 {
@@ -22,8 +21,7 @@ namespace NoAutoAggression
         public static int maximumAggression = 20;
         public static int aggressionHitIncrease = 5;
         // debug yes/no
-        public static bool debugAggression = true;
-        public static bool debugScenes = false;
+        public static bool debugAggression = false;
 
         [ModAPI.Attributes.ExecuteOnGameStart]
         static void AddMeToScene()
@@ -278,27 +276,17 @@ namespace NoAutoAggression
     // one for each mutant to set daily routine
     class NAAMutantDayCycle : mutantDayCycle
     {
-        protected override void Start()
-        {
-            // original code
-            base.Start();
-            // get/set initial aggression
-            if (!base.creepy)
-            {
-                base.aggression = NoAutoAggression.GetAggression(base.ai, base.aggression);
-                base.fsmAggresion.Value = 0;
-            }
-        }
+        // store old aggression
+        private int oldAggression;
 
-        protected override void setDayConditions()
+        void Update()
         {
-            // original code
-            base.setDayConditions();
-            // reset aggression
-            if (!base.creepy)
+            if ((!base.creepy) && (oldAggression != base.aggression) && (!base.fsmInCave.Value))
             {
                 base.aggression = NoAutoAggression.GetAggression(base.ai, base.aggression);
                 base.fsmAggresion.Value = 0;
+                oldAggression = base.aggression;
+                if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set to this aggression: " + base.aggression);
             }
         }
     }
@@ -306,141 +294,24 @@ namespace NoAutoAggression
     // several tasks/behaviour settings for mutants
     class NAAMutantAiManager : mutantAiManager
     {
+        // store old attackchance
+        private float oldAttackChance;
+
         // to take out all the auto aggression
-
-        public override void setOnStructureCombat()
+        void Update()
         {
-            // original code
-            base.setOnStructureCombat();
-            // reset current aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
-        }
-
-        public override void setPlaneCrashCombat()
-        {
-            // original code
-            base.setAggressiveCombat();
-            // reset current aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
-        }
-
-
-        public override void setCaveCombat()
-        {
-            // original code
-            base.setAggressiveCombat();
-            // reset current aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
-        }
-
-
-        public override void setDefaultCombat()
-        {
-            // original code
-            base.setAggressiveCombat();
-            // reset current aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
-        }
-
-        public override void setAggressiveCombat()
-        {
-            // original code
-            base.setAggressiveCombat();
-            // reset current aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
-        }
-
-        public override void setSkinnyAggressiveCombat()
-        {
-            // original code
-            base.setSkinnyAggressiveCombat();
-            // reset current aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
-        }
-
-        public override void setSkinnedMutantCombat()
-        {
-            // original code
-            base.setSkinnedMutantCombat();
-            // reset current aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
-        }
-
-        public override void setDayStalking()
-        {
-            // original code
-            base.setDayStalking();
-            // reset attackchance based on aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
-            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
-            if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
-        }
-
-        public override void setDefaultStalking()
-        {
-            // original code
-            base.setDefaultStalking();
-            // reset attackchance based on aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
-            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
-            if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
-        }
-
-        public override void setPlaneCrashStalking()
-        {
-            // original code
-            base.setPlaneCrashStalking();
-            // reset attackchance based on aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
-            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
-            if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
-        }
-
-        public override void setSkinnyNightStalking()
-        {
-            // original code
-            base.setSkinnyNightStalking();
-            // reset attackchance based on aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
-            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScream.Value = UnityEngine.Random.Range(0f,base.fsmAttackChance.Value);
-            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
-            if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
-        }
-
-        public override void setSkinnyStalking()
-        {
-            // original code
-            base.setSkinnyStalking();
-            // reset attackchance based on aggression
-            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-            base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
-            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
-            if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
+            if ((oldAttackChance != base.fsmAttackChance.Value) && (!base.searchFunctions.fsmInCave.Value))
+            {
+                base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
+                base.fsmAttack = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10);
+                base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+                base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+                base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+                base.fsmBackAway.Value = 1 - base.fsmAttackChance.Value;
+                base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
+                oldAttackChance = base.fsmAttackChance.Value;
+                if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
+            }
         }
     }
 
@@ -453,7 +324,7 @@ namespace NoAutoAggression
             // run normal code
             base.runGotHitScripts();
             // increase aggression
-            if ((base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote")) && (!this.setup.ai.creepy && !this.setup.ai.creepy_baby && !this.setup.ai.creepy_boss && !this.setup.ai.creepy_fat && !this.setup.ai.creepy_male))
+            if ((base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote")) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male) && (!base.setup.search.fsmInCave.Value))
             {
                 base.setup.dayCycle.aggression += NoAutoAggression.aggressionHitIncrease;
                 if (base.setup.dayCycle.aggression > NoAutoAggression.maximumAggression)
