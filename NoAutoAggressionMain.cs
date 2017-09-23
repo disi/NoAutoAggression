@@ -16,31 +16,20 @@ namespace NoAutoAggression
         private static string noAutoAggressionMainSavePath = "C:/Program Files (x86)/Steam/steamapps/common/The Forest/Mods/NoAutoAggression/";
         private static string noAutoAggressionSavePath;
         private static bool aggressionLock = false;
-        //private static NoAutoAggressionScenes NAASceneManager;
         // static values
         public static List<int> NAAItemDB = new List<int> { 33, 38, 47, 60, 81, 90, 94, 99, 109, 115, 178, 189, 190, 193 };
-        private static int minimumAggression = -1;
+        private static int minimumAggression = -1; // +1
         public static int maximumAggression = 20;
         public static int aggressionHitIncrease = 5;
         // debug yes/no
-        public static bool debugAggression = false;
-        public static bool debugScenes = true;
+        public static bool debugAggression = true;
+        public static bool debugScenes = false;
 
         [ModAPI.Attributes.ExecuteOnGameStart]
         static void AddMeToScene()
         {
             GameObject GO = new GameObject("__NoAutoAggression__");
             GO.AddComponent<NoAutoAggression>();
-            GO.AddComponent<NoAutoAggressionScenes>();
-        }
-
-        private void Update()
-        {
-            if (ModAPI.Input.GetButtonDown("SpawnItem"))
-            {
-                if (debugScenes) ModAPI.Log.Write("SpawnItem button pressed!");
-                GameObject.FindObjectOfType<NoAutoAggression>().GetComponent<NoAutoAggressionScenes>().StartScene(0);
-            }
         }
 
         // is called by NAASpawnManager in Start() usually when a new game is loaded
@@ -183,102 +172,6 @@ namespace NoAutoAggression
             else if (myMutantAi.pale) return "pale";
             else if (myMutantAi.creepy || myMutantAi.creepy_baby || myMutantAi.creepy_boss || myMutantAi.creepy_fat || myMutantAi.creepy_male) return "creepy";
             else return "regular";
-        }
-    }
-
-    public class NoAutoAggressionScenes : MonoBehaviour
-    {
-        private List<int> NAAItemDB;
-        private Coroutine scene0Coroutine;
-        private Coroutine sceneDCoroutine;
-
-        void Start()
-        {
-            NAAItemDB = NoAutoAggression.NAAItemDB;
-            if (NoAutoAggression.debugScenes) ModAPI.Log.Write("NoAutoAggressionScenes initialized");
-        }
-
-        public void StartScene(int scene)
-        {
-            if (NoAutoAggression.debugScenes) ModAPI.Log.Write("StartScene method reached!");
-            switch (scene)
-            {
-                case 0:
-                    scene0Coroutine = StartCoroutine(Scene0());
-                    break;
-                default:
-                    sceneDCoroutine = StartCoroutine(DummyRoutune());
-                    break;
-            }
-        }
-
-        // dummy
-        private IEnumerator DummyRoutune()
-        {
-            yield return true;
-        }
-
-        // random item spawn
-        private IEnumerator Scene0()
-        {
-            List<GameObject> myEnemies = LocalPlayer.ScriptSetup.targetFunctions.visibleEnemies;
-            if (myEnemies.Count > 0)
-            {
-                foreach (GameObject en in myEnemies)
-                {
-                    mutantTypeSetup myMutant = en.GetComponent<mutantTypeSetup>();
-                    if ((myMutant.setup.dayCycle.aggression < 10) && (myMutant.setup.ai.leader))
-                    {
-                        if (NoAutoAggression.debugScenes) ModAPI.Log.Write("found visible mutant leader with 0 aggression");
-                        foreach (GameObject fam in myMutant.spawner.allMembers)
-                        {
-                            mutantTypeSetup famMutant = fam.GetComponent<mutantTypeSetup>();
-                            famMutant.setup.ai.cancelDefaultActions();
-                            famMutant.setup.pmBrain.FsmVariables.GetFsmBool("fearOverrideBool").Value = true;
-                            famMutant.setup.pmCombat.FsmVariables.GetFsmBool("doGoToLeader").Value = true;
-                            famMutant.setup.Invoke("resetGoToLeader", 10f);
-                            famMutant.setup.Invoke("setFleeOverride", 75f);
-                            famMutant.setup.pmBrain.SendEvent("toSetFearful");
-                            famMutant.setup.aiManager.flee = true;
-                            famMutant.setup.pmBrain.FsmVariables.GetFsmGameObject("fearTargetGo").Value = LocalPlayer.GameObject;
-                            if (NoAutoAggression.debugScenes) ModAPI.Log.Write("sent mutant to leader");
-                        }
-                        myMutant.setup.pmBrain.FsmVariables.GetFsmBool("fearOverrideBool").Value = true;
-                        myMutant.setup.enemyEvents.disableWeapon();
-                        myMutant.setup.search.updateCurrentWaypoint(LocalPlayer.Transform.position + LocalPlayer.Transform.forward * 10f);
-                        myMutant.setup.search.setToWaypoint();
-                        for (int i = 0; ((i < 60) || (myMutant.setup.ai.mainPlayerDist > 12f)); i++)
-                        {
-                            if (NoAutoAggression.debugScenes) ModAPI.Log.Write("waiting!");
-                            yield return null;
-                        }
-                        myMutant.setup.enemyEvents.playSightedScream();
-                        if (NoAutoAggression.debugScenes) ModAPI.Log.Write("moved leader to player");
-                        int rnd = (int)Random.Range(1f, (float)NoAutoAggression.NAAItemDB.Count);
-                        GameObject present = TheForest.Items.Utils.ItemUtils.SpawnItem(NAAItemDB[rnd], (en.transform.position + en.transform.forward * 2f), Quaternion.identity);
-                        GameObject.Instantiate(present);
-                        if (NoAutoAggression.debugScenes) ModAPI.Log.Write("spawned item" + NAAItemDB[rnd]);
-                        float randDelay = (float)Random.Range(0f, 0.5f);
-                        myMutant.setup.Invoke("turnAround", randDelay);
-                        myMutant.setup.search.findCloseCaveWayPoint();
-                        myMutant.setup.search.getNextWayPoint();
-                        myMutant.setup.search.updateCurrentWaypoint(myMutant.setup.currentWaypoint.transform.position);
-                        myMutant.setup.search.setToWaypoint();
-                        if (NoAutoAggression.debugScenes) ModAPI.Log.Write("Scene0 finished!");
-                        yield return true;
-                    }
-                    else
-                    {
-                        if (NoAutoAggression.debugScenes) ModAPI.Log.Write("no suitable enemies");
-                        yield return true;
-                    }
-                }
-            }
-            else
-            {
-                if (NoAutoAggression.debugScenes) ModAPI.Log.Write("no suitable enemies");
-                yield return true;
-            }
         }
     }
 
@@ -485,7 +378,12 @@ namespace NoAutoAggression
             // original code
             base.setDayStalking();
             // reset attackchance based on aggression
+            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
             base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
+            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
             if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
         }
 
@@ -494,7 +392,12 @@ namespace NoAutoAggression
             // original code
             base.setDefaultStalking();
             // reset attackchance based on aggression
+            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
             base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
+            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
             if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
         }
 
@@ -503,7 +406,12 @@ namespace NoAutoAggression
             // original code
             base.setPlaneCrashStalking();
             // reset attackchance based on aggression
+            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
             base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
+            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
             if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
         }
 
@@ -512,7 +420,12 @@ namespace NoAutoAggression
             // original code
             base.setSkinnyNightStalking();
             // reset attackchance based on aggression
+            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
             base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
+            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScream.Value = UnityEngine.Random.Range(0f,base.fsmAttackChance.Value);
+            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
             if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
         }
 
@@ -521,7 +434,12 @@ namespace NoAutoAggression
             // original code
             base.setSkinnyStalking();
             // reset attackchance based on aggression
+            base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
             base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
+            base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+            base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
             if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance  " + base.fsmAttackChance.Value.ToString("N3"));
         }
     }

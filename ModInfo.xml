@@ -1,5 +1,5 @@
 <Mod ID="NoAutoAggression">
-  <Compatible>0.66</Compatible>
+  <Compatible>0.67b</Compatible>
   <Button Standard="O" ID="SpawnItem">
     <Name>
       <EN>SpawnItem</EN>
@@ -14,5 +14,5 @@
   <Description>
     <EN>Removes the automated increase of aggression.</EN>
   </Description>
-  <Version>1.0.0.3</Version>
+  <Version>1.0.0.4</Version>
 </Mod>
