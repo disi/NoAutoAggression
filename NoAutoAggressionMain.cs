@@ -5,16 +5,17 @@ using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using TheForest.Utils.Settings;
+using System.Threading;
 
 namespace NoAutoAggression
 {
     class NoAutoAggression : MonoBehaviour
     {
         private static Dictionary<string, int> aggressionStore;
+        private static ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
         private static int mutantDayCycleDay = Clock.Day;
         private static string noAutoAggressionMainSavePath = "C:/Program Files (x86)/Steam/steamapps/common/The Forest/Mods/NoAutoAggression/";
         private static string noAutoAggressionSaveSlot;
-        private static bool aggressionLock = false;
         // static values
         private static int minimumAggression = -1; // +1
         public static int maximumAggression = 20;
@@ -32,6 +33,7 @@ namespace NoAutoAggression
         }
 
         // is called by NAASpawnManager in OnEnable() usually when a new game is loaded
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public static void CreateAggressionStore()
         {
             // get our aggression
@@ -56,80 +58,85 @@ namespace NoAutoAggression
         }
 
         // is called by NAAMutantAnimatorControl when a mutant is hit
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public static int StoreAggression(mutantAI myAI, int myAggression)
         {
             // aggression store
-            if (!aggressionLock)
+            if (aggressionStore.ContainsKey(AiName(myAI)))
             {
-                if (aggressionStore.ContainsKey(AiName(myAI)))
+                rwLock.EnterReadLock();
+                int storeAggression = (int)aggressionStore[AiName(myAI)];
+                rwLock.ExitReadLock();
+                if (storeAggression < myAggression)
                 {
-                    if ((int)aggressionStore[AiName(myAI)] < myAggression)
-                    {
-                        aggressionStore[AiName(myAI)] = myAggression;
-                        if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this higher aggression: " + (int)aggressionStore[AiName(myAI)]);
-                        return myAggression;
-                    }
-                    else
-                    {
-                        if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " loaded this aggression: " + (int)aggressionStore[AiName(myAI)]);
-                        return (int)aggressionStore[AiName(myAI)];
-                    }
+                    rwLock.EnterWriteLock();
+                    aggressionStore[AiName(myAI)] = myAggression;
+                    rwLock.ExitWriteLock();
+                    if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this higher aggression: " + myAggression);
+                    return myAggression;
                 }
                 else
                 {
-                    aggressionStore[AiName(myAI)] = 0;
-                    if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this new aggression: 0");
-                    return 0;
+                    if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " loaded this aggression: " + storeAggression);
+                    return storeAggression;
+
                 }
             }
-            return 0;
+            else
+            {
+                rwLock.EnterWriteLock();
+                aggressionStore[AiName(myAI)] = 0;
+                rwLock.ExitWriteLock();
+                if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this new aggression: 0");
+                return 0;
+            }
         }
 
         // is called by several threads to reset/update their aggression
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public static int GetAggression(mutantAI myAI, int myAggression)
         {
-            if (!aggressionLock)
+            // aggression store
+            if (aggressionStore.ContainsKey(AiName(myAI)))
             {
-                // aggression store
-                if (aggressionStore.ContainsKey(AiName(myAI)))
-                {
-                    if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " loaded this aggression: " + (int)aggressionStore[AiName(myAI)]);
-                    return (int)aggressionStore[AiName(myAI)];
-                }
-                else
-                {
-                    aggressionStore[AiName(myAI)] = 0;
-                    if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this new aggression: 0");
-                    return 0;
-                }
+                rwLock.EnterReadLock();
+                int storeAggression = (int)aggressionStore[AiName(myAI)];
+                rwLock.ExitReadLock();
+                if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " loaded this aggression: " + storeAggression);
+                return storeAggression;
             }
-            return 0;
+            else
+            {
+                rwLock.EnterWriteLock();
+                aggressionStore[AiName(myAI)] = 0;
+                rwLock.ExitWriteLock();
+                if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this new aggression: 0");
+                return 0;
+            }
         }
 
         // is called by NAASpawnManager once a day
-        [MethodImpl(MethodImplOptions.Synchronized)]
         public static void LowerAggression()
         {
             if (CheckMutantDayCycle())
             {
-                if (!aggressionLock)
+                rwLock.EnterReadLock();
+                List<string> keys = new List<string>(aggressionStore.Keys);
+                rwLock.ExitReadLock();
+                foreach (string key in keys)
                 {
-                    NoAutoAggression.LockAggression();
-                    List<string> keys = new List<string>(aggressionStore.Keys);
-                    foreach (string key in keys)
+                    rwLock.EnterReadLock();
+                    int tempInt = aggressionStore[key] - 1;
+                    rwLock.ExitReadLock();
+                    if (tempInt > minimumAggression)
                     {
-                        int tempInt = aggressionStore[key] - 1;
-                        if (tempInt > minimumAggression)
-                        {
-                            aggressionStore[key] = tempInt;
-                            if (debugAggression) ModAPI.Log.Write(key + " aggression lowered on day " + Clock.Day + " to " + tempInt);
-                        }
+                        rwLock.EnterWriteLock();
+                        aggressionStore[key] = tempInt;
+                        rwLock.ExitWriteLock();
+                        if (debugAggression) ModAPI.Log.Write(key + " aggression lowered on day " + Clock.Day + " to " + tempInt);
                     }
-                    aggressionStore["mutantDayCycleDay"] = Clock.Day;
-                    NoAutoAggression.LockAggression();
                 }
+                rwLock.EnterWriteLock();
+                aggressionStore["mutantDayCycleDay"] = Clock.Day;
+                rwLock.ExitWriteLock();
             }
         }
 
@@ -139,7 +146,10 @@ namespace NoAutoAggression
             // check and update day
             if (aggressionStore.ContainsKey("mutantDayCycleDay"))
             {
-                if (aggressionStore["mutantDayCycleDay"] != Clock.Day)
+                rwLock.EnterReadLock();
+                int mutantDayCycleDay = aggressionStore["mutantDayCycleDay"];
+                rwLock.ExitReadLock();
+                if (mutantDayCycleDay != Clock.Day)
                 {
                     return true;
                 }
@@ -158,27 +168,17 @@ namespace NoAutoAggression
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static void SaveAggression()
         {
-            if (!aggressionLock)
+            NAAUpdateSaveSlot();
+            if (!File.Exists(noAutoAggressionSaveSlot))
             {
-                NAAUpdateSaveSlot();
-                NoAutoAggression.LockAggression();
-                if (!File.Exists(noAutoAggressionSaveSlot))
-                {
-                    System.IO.Directory.CreateDirectory(noAutoAggressionSaveSlot);
-                }
-                var serializer = new XmlSerializer(typeof(SerializableDictionary<string, int>));
-                var stream = new FileStream(noAutoAggressionSaveSlot + "/aggression.xml", FileMode.Create);
-                serializer.Serialize(stream, aggressionStore);
-                stream.Close();
-                NoAutoAggression.LockAggression();
+                System.IO.Directory.CreateDirectory(noAutoAggressionSaveSlot);
             }
-        }
-
-        // lock aggressionstore
-        [MethodImpl(MethodImplOptions.Synchronized)]
-        public static void LockAggression()
-        {
-            aggressionLock = !aggressionLock;
+            var serializer = new XmlSerializer(typeof(SerializableDictionary<string, int>));
+            var stream = new FileStream(noAutoAggressionSaveSlot + "/aggression.xml", FileMode.Create);
+            rwLock.EnterReadLock();
+            serializer.Serialize(stream, aggressionStore);
+            stream.Close();
+            rwLock.ExitReadLock();
         }
 
         // distinguish between ai and return as string
@@ -193,6 +193,7 @@ namespace NoAutoAggression
         }
 
         // update savepath
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public static void NAAUpdateSaveSlot()
         {
             noAutoAggressionSaveSlot = noAutoAggressionMainSavePath + SaveSlotUtils.GetLocalSlotPath().Substring(SaveSlotUtils.GetLocalSlotPath().Length - 6);
