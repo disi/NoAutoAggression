@@ -19,6 +19,7 @@ namespace NoAutoAggression
         private static int minimumAggression = -1; // +1
         public static int maximumAggression = 20;
         public static int aggressionHitIncrease = 5;
+        public static int aggressionEffigyIncrease = 1;
         // debug yes/no
         public static bool debugAggression = false;
         public static bool debugSaveSlot = false;
@@ -280,8 +281,6 @@ namespace NoAutoAggression
             base.addToMutantAmounts();
             // lower aggression once a day by 1
             NoAutoAggression.LowerAggression();
-            // save aggression to file
-            NoAutoAggression.SaveAggression();
         }
 
         private void OnDisable()
@@ -315,6 +314,7 @@ namespace NoAutoAggression
         {
             if ((!base.searchFunctions.fsmInCave.Value) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male))
             {
+                base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
                 base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
                 base.fsmAttack = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10);
                 base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
@@ -457,7 +457,28 @@ namespace NoAutoAggression
                 {
                     base.setup.dayCycle.aggression = NoAutoAggression.maximumAggression;
                 }
-                base.setup.dayCycle.aggression = NoAutoAggression.StoreAggression(base.ai, base.setup.dayCycle.aggression);
+                base.setup.dayCycle.aggression = NoAutoAggression.StoreAggression(base.setup.ai, base.setup.dayCycle.aggression);
+                base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
+            }
+        }
+    }
+
+    // event triggered when a mutant collides with something
+    class NAAMutantCollisionDetect : mutantCollisionDetect
+    {
+        protected override void OnTriggerEnter(Collider other)
+        {
+            // original code
+            base.OnTriggerEnter(other);
+            // check if mutant collided with a player effigy and increase aggression
+            if (base.inEffigy)
+            {
+                base.setup.dayCycle.aggression += NoAutoAggression.aggressionEffigyIncrease;
+                if (base.setup.dayCycle.aggression > NoAutoAggression.maximumAggression)
+                {
+                    base.setup.dayCycle.aggression = NoAutoAggression.maximumAggression;
+                }
+                base.setup.dayCycle.aggression = NoAutoAggression.StoreAggression(base.setup.ai, base.setup.dayCycle.aggression);
                 base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
             }
         }
