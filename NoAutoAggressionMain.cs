@@ -13,15 +13,15 @@ namespace NoAutoAggression
         private static Dictionary<string, int> aggressionStore;
         private static int mutantDayCycleDay = Clock.Day;
         private static string noAutoAggressionMainSavePath = "C:/Program Files (x86)/Steam/steamapps/common/The Forest/Mods/NoAutoAggression/";
-        private static string noAutoAggressionSavePath;
+        private static string noAutoAggressionSaveSlot;
         private static bool aggressionLock = false;
         // static values
-        public static List<int> NAAItemDB = new List<int> { 33, 38, 47, 60, 81, 90, 94, 99, 109, 115, 178, 189, 190, 193 };
         private static int minimumAggression = -1; // +1
         public static int maximumAggression = 20;
         public static int aggressionHitIncrease = 5;
         // debug yes/no
         public static bool debugAggression = false;
+        public static bool debugSaveSlot = false;
 
         [ModAPI.Attributes.ExecuteOnGameStart]
         static void AddMeToScene()
@@ -30,16 +30,16 @@ namespace NoAutoAggression
             GO.AddComponent<NoAutoAggression>();
         }
 
-        // is called by NAASpawnManager in Start() usually when a new game is loaded
+        // is called by NAASpawnManager in OnEnable() usually when a new game is loaded
         public static void CreateAggressionStore()
         {
             // get our aggression
             aggressionStore = null;
-            noAutoAggressionSavePath = noAutoAggressionMainSavePath + SaveSlotUtils.GetLocalSlotPath().Substring(SaveSlotUtils.GetLocalSlotPath().Length - 6);
-            if (File.Exists(noAutoAggressionSavePath + "/aggression.xml"))
+            NAAUpdateSaveSlot();
+            if (File.Exists(noAutoAggressionSaveSlot + "/aggression.xml"))
             {
                 var serializer = new XmlSerializer(typeof(SerializableDictionary<string, int>));
-                var stream = new FileStream(noAutoAggressionSavePath + "/aggression.xml", FileMode.Open);
+                var stream = new FileStream(noAutoAggressionSaveSlot + "/aggression.xml", FileMode.Open);
                 aggressionStore = serializer.Deserialize(stream) as SerializableDictionary<string, int>;
                 stream.Close();
             }
@@ -59,11 +59,7 @@ namespace NoAutoAggression
         public static int StoreAggression(mutantAI myAI, int myAggression)
         {
             // aggression store
-            if (aggressionLock)
-            {
-                return 0;
-            }
-            else
+            if (!aggressionLock)
             {
                 if (aggressionStore.ContainsKey(AiName(myAI)))
                 {
@@ -86,17 +82,14 @@ namespace NoAutoAggression
                     return 0;
                 }
             }
+            return 0;
         }
 
         // is called by several threads to reset/update their aggression
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static int GetAggression(mutantAI myAI, int myAggression)
         {
-            if (aggressionLock)
-            {
-                return 0;
-            }
-            else
+            if (!aggressionLock)
             {
                 // aggression store
                 if (aggressionStore.ContainsKey(AiName(myAI)))
@@ -111,57 +104,83 @@ namespace NoAutoAggression
                     return 0;
                 }
             }
+            return 0;
         }
 
-        // is called by NAASpawnManager once a day or when game is loaded
+        // is called by NAASpawnManager once a day
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static void LowerAggression()
         {
-            if (!aggressionLock)
+            if (CheckMutantDayCycle())
             {
-                NoAutoAggression.LockAggression();
-                List<string> keys = new List<string>(aggressionStore.Keys);
-                foreach (string key in keys)
+                if (!aggressionLock)
                 {
-                    int tempInt = aggressionStore[key] - 1;
-                    if (tempInt > minimumAggression)
+                    NoAutoAggression.LockAggression();
+                    List<string> keys = new List<string>(aggressionStore.Keys);
+                    foreach (string key in keys)
                     {
-                        aggressionStore[key] = tempInt;
-                        if (debugAggression) ModAPI.Log.Write(key + " aggression lowered on day " + Clock.Day + " to " + tempInt);
+                        int tempInt = aggressionStore[key] - 1;
+                        if (tempInt > minimumAggression)
+                        {
+                            aggressionStore[key] = tempInt;
+                            if (debugAggression) ModAPI.Log.Write(key + " aggression lowered on day " + Clock.Day + " to " + tempInt);
+                        }
                     }
+                    aggressionStore["mutantDayCycleDay"] = Clock.Day;
+                    NoAutoAggression.LockAggression();
                 }
-                NoAutoAggression.LockAggression();
             }
         }
 
-        // is called by NAASpawnManager every few minutes or when mutantspawns are counted
+        // check the last day aggression was lowered
+        public static bool CheckMutantDayCycle()
+        {
+            // check and update day
+            if (aggressionStore.ContainsKey("mutantDayCycleDay"))
+            {
+                if (aggressionStore["mutantDayCycleDay"] != Clock.Day)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return true;
+            }
+        }
+
+        // is called by NAASpawnManager every few minutes when mutantspawns are counted or the NAASpawnManager destroyed
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static void SaveAggression()
         {
             if (!aggressionLock)
             {
+                NAAUpdateSaveSlot();
                 NoAutoAggression.LockAggression();
-                noAutoAggressionSavePath = noAutoAggressionMainSavePath + SaveSlotUtils.GetLocalSlotPath().Substring(SaveSlotUtils.GetLocalSlotPath().Length - 6);
-                if (!File.Exists(noAutoAggressionSavePath))
+                if (!File.Exists(noAutoAggressionSaveSlot))
                 {
-                    System.IO.Directory.CreateDirectory(noAutoAggressionSavePath);
+                    System.IO.Directory.CreateDirectory(noAutoAggressionSaveSlot);
                 }
                 var serializer = new XmlSerializer(typeof(SerializableDictionary<string, int>));
-                var stream = new FileStream(noAutoAggressionSavePath + "/aggression.xml", FileMode.Create);
+                var stream = new FileStream(noAutoAggressionSaveSlot + "/aggression.xml", FileMode.Create);
                 serializer.Serialize(stream, aggressionStore);
                 stream.Close();
                 NoAutoAggression.LockAggression();
             }
         }
 
+        // lock aggressionstore
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static void LockAggression()
         {
             aggressionLock = !aggressionLock;
         }
 
-
-
+        // distinguish between ai and return as string
         private static string AiName(mutantAI myMutantAi)
         {
             if (myMutantAi.femaleSkinny || myMutantAi.maleSkinny) return "skinny";
@@ -170,6 +189,13 @@ namespace NoAutoAggression
             else if (myMutantAi.pale) return "pale";
             else if (myMutantAi.creepy || myMutantAi.creepy_baby || myMutantAi.creepy_boss || myMutantAi.creepy_fat || myMutantAi.creepy_male) return "creepy";
             else return "regular";
+        }
+
+        // update savepath
+        public static void NAAUpdateSaveSlot()
+        {
+            noAutoAggressionSaveSlot = noAutoAggressionMainSavePath + SaveSlotUtils.GetLocalSlotPath().Substring(SaveSlotUtils.GetLocalSlotPath().Length - 6);
+            if (debugSaveSlot) ModAPI.Log.Write("Current SaveSlot: " + noAutoAggressionSaveSlot);
         }
     }
 
@@ -242,13 +268,9 @@ namespace NoAutoAggression
     // single instance to manage the mutant spawns
     class NAASpawnManager : mutantSpawnManager
     {
-        private int mutantDayCycleDay = Clock.Day;
-
-        protected override void Start()
+        private void OnEnable()
         {
-            // original code
-            base.Start();
-            // create aggressionStore
+            // create aggressionStore - potential override in future game versions
             NoAutoAggression.CreateAggressionStore();
         }
 
@@ -257,18 +279,14 @@ namespace NoAutoAggression
             // original code
             base.addToMutantAmounts();
             // lower aggression once a day by 1
-            if (Clock.Day != mutantDayCycleDay)
-            {
-                mutantDayCycleDay = Clock.Day;
-                NoAutoAggression.LowerAggression();
-            }
+            NoAutoAggression.LowerAggression();
             // save aggression to file
             NoAutoAggression.SaveAggression();
         }
 
-        private void OnDestroy()
+        private void OnDisable()
         {
-            // save aggression to file
+            // save aggression to file - potential override in future game versions
             NoAutoAggression.SaveAggression();
         }
     }
@@ -276,17 +294,15 @@ namespace NoAutoAggression
     // one for each mutant to set daily routine
     class NAAMutantDayCycle : mutantDayCycle
     {
-        // store old aggression
-        private int oldAggression;
-
-        void Update()
+        protected override void setDayConditions()
         {
-            if ((!base.creepy) && (oldAggression != base.aggression) && (!base.fsmInCave.Value))
+            // original code
+            base.setDayConditions();
+            // set/reset aggression values
+            if ((!base.creepy) && (!base.fsmInCave.Value))
             {
                 base.aggression = NoAutoAggression.GetAggression(base.ai, base.aggression);
                 base.fsmAggresion.Value = 0;
-                oldAggression = base.aggression;
-                if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set to this aggression: " + base.aggression);
             }
         }
     }
@@ -294,24 +310,134 @@ namespace NoAutoAggression
     // several tasks/behaviour settings for mutants
     class NAAMutantAiManager : mutantAiManager
     {
-        // store old attackchance
-        private float oldAttackChance;
-
         // to take out all the auto aggression
-        void Update()
+        private void UpdateAttackChance()
         {
-            if ((oldAttackChance != base.fsmAttackChance.Value) && (!base.searchFunctions.fsmInCave.Value))
+            if ((!base.searchFunctions.fsmInCave.Value) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male))
             {
                 base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
                 base.fsmAttack = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10);
                 base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
                 base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
                 base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-                base.fsmBackAway.Value = 1 - base.fsmAttackChance.Value;
-                base.fsmDisengage.Value = 1 - base.fsmAttackChance.Value;
-                oldAttackChance = base.fsmAttackChance.Value;
+                base.fsmBackAway.Value = Mathf.Clamp(2 - base.fsmAttackChance.Value, 0, 2);
+                base.fsmDisengage.Value = Mathf.Clamp(2 - base.fsmAttackChance.Value, 0, 2);
                 if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
             }
+        }
+
+        public override void setAggressiveCombat()
+        {
+            base.setAggressiveCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setCaveCombat()
+        {
+            base.setCaveCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setCaveSearching()
+        {
+            base.setCaveSearching();
+            UpdateAttackChance();
+        }
+
+        public override void setDaySearching()
+        {
+            base.setDaySearching();
+            UpdateAttackChance();
+        }
+
+        public override void setDayStalking()
+        {
+            base.setDayStalking();
+            UpdateAttackChance();
+        }
+
+        public override void setDefaultCombat()
+        {
+            base.setDefaultCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setDefaultSearching()
+        {
+            base.setDefaultSearching();
+            UpdateAttackChance();
+        }
+
+        public override void setDefaultStalking()
+        {
+            base.setDefaultStalking();
+            UpdateAttackChance();
+        }
+
+        public override void setDefensiveCombat()
+        {
+            base.setDefensiveCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setFiremanCombat()
+        {
+            base.setFiremanCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setOnStructureCombat()
+        {
+            base.setOnStructureCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setPlaneCrashCombat()
+        {
+            base.setPlaneCrashCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setPlaneCrashStalking()
+        {
+            base.setPlaneCrashStalking();
+            UpdateAttackChance();
+        }
+
+        public override void setSkinnedMutantCombat()
+        {
+            base.setSkinnedMutantCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setSkinnyAggressiveCombat()
+        {
+            base.setSkinnyAggressiveCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setSkinnyCombat()
+        {
+            base.setSkinnyCombat();
+            UpdateAttackChance();
+        }
+
+        public override void setSkinnyDaySearching()
+        {
+            base.setSkinnyDaySearching();
+            UpdateAttackChance();
+        }
+
+        public override void setSkinnyNightSearching()
+        {
+            base.setSkinnyNightSearching();
+            UpdateAttackChance();
+        }
+
+        public override void setSkinnyNightStalking()
+        {
+            base.setSkinnyNightStalking();
+            UpdateAttackChance();
         }
     }
 
