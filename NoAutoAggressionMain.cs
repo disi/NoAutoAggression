@@ -20,9 +20,11 @@ namespace NoAutoAggression
         private static int minimumAggression = -1; // +1
         public static int maximumAggression = 20;
         public static int aggressionHitIncrease = 5;
-        public static int aggressionEffigyIncrease = 1;
+        public static int aggressionEffigyIncrease = 0;
         // debug yes/no
         public static bool debugAggression = false;
+        public static bool debugAggressionIncrease = false;
+        public static bool debugAttackChance = false;
         public static bool debugSaveSlot = false;
 
         [ModAPI.Attributes.ExecuteOnGameStart]
@@ -71,7 +73,7 @@ namespace NoAutoAggression
                     rwLock.EnterWriteLock();
                     aggressionStore[AiName(myAI)] = myAggression;
                     rwLock.ExitWriteLock();
-                    if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this higher aggression: " + myAggression);
+                    if (debugAggressionIncrease) ModAPI.Log.Write(AiName(myAI) + " saved this higher aggression: " + myAggression);
                     return myAggression;
                 }
                 else
@@ -323,7 +325,7 @@ namespace NoAutoAggression
                 base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
                 base.fsmBackAway.Value = Mathf.Clamp(2 - base.fsmAttackChance.Value, 0, 2);
                 base.fsmDisengage.Value = Mathf.Clamp(2 - base.fsmAttackChance.Value, 0, 2);
-                if (NoAutoAggression.debugAggression) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
+                if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
             }
         }
 
@@ -438,6 +440,12 @@ namespace NoAutoAggression
         public override void setSkinnyNightStalking()
         {
             base.setSkinnyNightStalking();
+            UpdateAttackChance();
+        }
+
+        public override void setSkinnyStalking()
+        {
+            base.setSkinnyStalking();
             UpdateAttackChance();
         }
     }

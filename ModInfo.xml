@@ -1,10 +1,10 @@
 <Mod ID="NoAutoAggression">
-  <Compatible>0.67b</Compatible>
+  <Compatible>0.67c</Compatible>
   <Name>
     <EN>NoAutoAggression</EN>
   </Name>
   <Description>
     <EN>Removes the automated increase of aggression.</EN>
   </Description>
-  <Version>1.0.1.0</Version>
+  <Version>1.0.1.1</Version>
 </Mod>
