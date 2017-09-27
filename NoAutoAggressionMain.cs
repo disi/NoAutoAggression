@@ -20,7 +20,6 @@ namespace NoAutoAggression
         private static int minimumAggression = -1; // +1
         public static int maximumAggression = 20;
         public static int aggressionHitIncrease = 5;
-        public static int aggressionEffigyIncrease = 0;
         // debug yes/no
         public static bool debugAggression = false;
         public static bool debugAggressionIncrease = false;
@@ -462,27 +461,6 @@ namespace NoAutoAggression
             if ((base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote")) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male) && (!base.setup.search.fsmInCave.Value))
             {
                 base.setup.dayCycle.aggression += NoAutoAggression.aggressionHitIncrease;
-                if (base.setup.dayCycle.aggression > NoAutoAggression.maximumAggression)
-                {
-                    base.setup.dayCycle.aggression = NoAutoAggression.maximumAggression;
-                }
-                base.setup.dayCycle.aggression = NoAutoAggression.StoreAggression(base.setup.ai, base.setup.dayCycle.aggression);
-                base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
-            }
-        }
-    }
-
-    // event triggered when a mutant collides with something
-    class NAAMutantCollisionDetect : mutantCollisionDetect
-    {
-        protected override void OnTriggerEnter(Collider other)
-        {
-            // original code
-            base.OnTriggerEnter(other);
-            // check if mutant collided with a player effigy and increase aggression
-            if (base.inEffigy)
-            {
-                base.setup.dayCycle.aggression += NoAutoAggression.aggressionEffigyIncrease;
                 if (base.setup.dayCycle.aggression > NoAutoAggression.maximumAggression)
                 {
                     base.setup.dayCycle.aggression = NoAutoAggression.maximumAggression;
