@@ -299,7 +299,7 @@ namespace NoAutoAggression
             // original code
             base.setDayConditions();
             // set/reset aggression values
-            if ((!base.fsmInCave.Value) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male))
+            if ((!base.fsmInCave.Value) && (!base.setup.ai.creepy))
             {
                 base.aggression = NoAutoAggression.GetAggression(base.ai, base.aggression);
                 base.fsmAggresion.Value = base.aggression;
@@ -319,9 +319,10 @@ namespace NoAutoAggression
                 base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = base.setup.dayCycle.aggression;
                 base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
                 base.fsmAttack = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10);
-                base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-                base.fsmScreamRunTowards.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
-                base.fsmScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
+                base.fsmRunAwayChance.Value = Mathf.Clamp(3 - base.fsmAttackChance.Value, 0, 2);
+                base.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0, 2);
+                base.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0, 2);
+                base.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0, 2);
                 base.fsmBackAway.Value = Mathf.Clamp(2 - base.fsmAttackChance.Value, 0, 2);
                 base.fsmDisengage.Value = Mathf.Clamp(2 - base.fsmAttackChance.Value, 0, 2);
                 if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
