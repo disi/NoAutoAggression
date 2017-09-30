@@ -17,7 +17,7 @@ namespace NoAutoAggression
         private static string noAutoAggressionMainSavePath = "C:/Program Files (x86)/Steam/steamapps/common/The Forest/Mods/NoAutoAggression/";
         private static string noAutoAggressionSaveSlot;
         // static values
-        private static int minimumAggression = -1; // +1
+        private static int minimumAggression = -2; // +1
         public static int maximumAggression = 20;
         public static int aggressionHitIncrease = 5;
         // debug yes/no
@@ -204,8 +204,7 @@ namespace NoAutoAggression
 
     // copied from https://weblogs.asp.net/pwelter34/444961 Thank you sooooo much!
     [XmlRoot("dictionary")]
-    public class SerializableDictionary<TKey, TValue>
-    : Dictionary<TKey, TValue>, IXmlSerializable
+    public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IXmlSerializable
     {
         #region IXmlSerializable Members
         public System.Xml.Schema.XmlSchema GetSchema()
@@ -300,10 +299,10 @@ namespace NoAutoAggression
             // original code
             base.setDayConditions();
             // set/reset aggression values
-            if ((!base.creepy) && (!base.fsmInCave.Value))
+            if ((!base.fsmInCave.Value) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male))
             {
                 base.aggression = NoAutoAggression.GetAggression(base.ai, base.aggression);
-                base.fsmAggresion.Value = 0;
+                base.fsmAggresion.Value = base.aggression;
             }
         }
     }
@@ -317,6 +316,7 @@ namespace NoAutoAggression
             if ((!base.searchFunctions.fsmInCave.Value) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male))
             {
                 base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
+                base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = base.setup.dayCycle.aggression;
                 base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
                 base.fsmAttack = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10);
                 base.fsmRunTowardsScream.Value = UnityEngine.Random.Range(0f, base.fsmAttackChance.Value);
@@ -447,6 +447,18 @@ namespace NoAutoAggression
             base.setSkinnyStalking();
             UpdateAttackChance();
         }
+
+        public override void setTestSearching()
+        {
+            base.setTestSearching();
+            UpdateAttackChance();
+        }
+
+        public override void setTestStalking()
+        {
+            base.setTestStalking();
+            UpdateAttackChance();
+        }
     }
 
     // event triggered when a mutant is hit
@@ -466,7 +478,7 @@ namespace NoAutoAggression
                     base.setup.dayCycle.aggression = NoAutoAggression.maximumAggression;
                 }
                 base.setup.dayCycle.aggression = NoAutoAggression.StoreAggression(base.setup.ai, base.setup.dayCycle.aggression);
-                base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = 0;
+                base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = base.setup.dayCycle.aggression;
             }
         }
     }
