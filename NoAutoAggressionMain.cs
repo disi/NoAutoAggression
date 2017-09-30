@@ -317,14 +317,14 @@ namespace NoAutoAggression
             {
                 base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
                 base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = base.setup.dayCycle.aggression;
-                base.fsmAttackChance.Value = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10);
-                base.fsmAttack = (float)((base.setup.dayCycle.aggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10);
-                base.fsmRunAwayChance.Value = Mathf.Clamp(3 - base.fsmAttackChance.Value, 0, 2);
-                base.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0, 2);
-                base.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0, 2);
-                base.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0, 2);
-                base.fsmBackAway.Value = Mathf.Clamp(2 - base.fsmAttackChance.Value, 0, 2);
-                base.fsmDisengage.Value = Mathf.Clamp(2 - base.fsmAttackChance.Value, 0, 2);
+                base.fsmAttackChance.Value = ((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
+                base.fsmAttack = ((base.setup.dayCycle.aggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
+                base.fsmRunAwayChance.Value = Mathf.Clamp(3f - base.fsmAttackChance.Value, 0f, 3f);
+                base.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0f, 2f);
+                base.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0f, 2f);
+                base.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0f, 2f);
+                base.fsmBackAway.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0f, 2f);
+                base.fsmDisengage.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0f, 2f);
                 if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
             }
         }
