@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Xml.Serialization;
 using TheForest.Utils.Settings;
 using System.Threading;
+using HutongGames.PlayMaker;
 
 namespace NoAutoAggression
 {
@@ -299,7 +300,7 @@ namespace NoAutoAggression
             // original code
             base.setDayConditions();
             // set/reset aggression values
-            if ((!base.fsmInCave.Value) && (!base.setup.ai.creepy))
+            if ((!base.setup.search.fsmInCave.Value) && (!base.creepy))
             {
                 base.aggression = NoAutoAggression.GetAggression(base.ai, base.aggression);
                 base.fsmAggresion.Value = base.aggression;
@@ -313,8 +314,29 @@ namespace NoAutoAggression
         // to take out all the auto aggression
         private void UpdateAttackChance()
         {
-            if ((!base.searchFunctions.fsmInCave.Value) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male))
+            if ((!base.searchFunctions.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
             {
+                // FSM Data auslesen
+                /*
+                //Fsm myFSM = base.setup.pmBrain.Fsm;
+                //Fsm myFSM = base.setup.pmEncounter.Fsm;
+                //Fsm myFSM = base.setup.pmCombat.Fsm;
+                Fsm myFSM = base.setup.pmSleep.Fsm;
+                ModAPI.Log.Write(myFSM.Name + " FSM Owner:" + myFSM.Owner.name);
+                foreach (var item in myFSM.Events)
+                {
+                    ModAPI.Log.Write(myFSM.Name + " FSM Events:" + item.Name);
+                }
+                foreach (var item in myFSM.States)
+                {
+                    ModAPI.Log.Write(myFSM.Name + " FSM States:" + item.Name);
+                }
+                foreach (var item in myFSM.GlobalTransitions)
+                {
+                    ModAPI.Log.Write(myFSM.Name + " FSM Transitions:" + item.EventName);
+                }
+                ModAPI.Log.Write("----------------------------------------------");
+                */
                 base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
                 base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = base.setup.dayCycle.aggression;
                 base.fsmAttackChance.Value = ((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
@@ -326,6 +348,36 @@ namespace NoAutoAggression
                 base.fsmBackAway.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0f, 2f);
                 base.fsmDisengage.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0f, 2f);
                 if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
+                // send mutants away if they are friendly
+                if (base.setup.dayCycle.aggression <= 0)
+                {
+                    if (base.setup.animControl.fsmPlayerDist.Value < 30f)
+                    {
+                        if (base.setup.pmCombat != null)
+                        {
+                            if (base.setup.ai.leader)
+                            {
+                                base.setup.pmCombat.SendEvent("goToRunAway");
+                            }
+                            else
+                            {
+                                base.setup.pmCombat.SendEvent("goToLeader");
+                            }
+                        }
+                        if (base.setup.pmEncounter != null)
+                        {
+                            base.setup.pmEncounter.SendEvent("FINISHED");
+                        }
+                        if ((base.ai.skinned) || (base.ai.femaleSkinny) || (base.ai.maleSkinny))
+                        {
+                            base.setup.pmBrain.SendEvent("toSetFearful");
+                        }
+                        else
+                        {
+                            base.setup.pmBrain.SendEvent("toSetPassive");
+                        }
+                    }
+                }
             }
         }
 
@@ -471,7 +523,7 @@ namespace NoAutoAggression
             // run normal code
             base.runGotHitScripts();
             // increase aggression
-            if ((base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote")) && (!base.setup.ai.creepy && !base.setup.ai.creepy_baby && !base.setup.ai.creepy_boss && !base.setup.ai.creepy_fat && !base.setup.ai.creepy_male) && (!base.setup.search.fsmInCave.Value))
+            if ((base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote")) && (!base.setup.dayCycle.creepy) && (!base.setup.search.fsmInCave.Value))
             {
                 base.setup.dayCycle.aggression += NoAutoAggression.aggressionHitIncrease;
                 if (base.setup.dayCycle.aggression > NoAutoAggression.maximumAggression)
