@@ -525,6 +525,20 @@ namespace NoAutoAggression
             // original code
             base.Die();
         }
+
+        protected override void DieTrap(int type)
+        {
+            // check if player-trap killed mutant and increase aggression
+            if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
+            {
+                    if (base.deathFromTrap)
+                    {
+                        NoAutoAggression.IncreaseAggression(base.setup.ai);
+                    }
+            }
+            // original code
+            base.DieTrap(type);
+        }
     }
 }
 
