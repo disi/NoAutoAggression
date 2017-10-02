@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Xml.Serialization;
 using TheForest.Utils.Settings;
 using System.Threading;
-using HutongGames.PlayMaker;
 
 namespace NoAutoAggression
 {
@@ -18,9 +17,11 @@ namespace NoAutoAggression
         private static string noAutoAggressionMainSavePath = "C:/Program Files (x86)/Steam/steamapps/common/The Forest/Mods/NoAutoAggression/";
         private static string noAutoAggressionSaveSlot;
         // static values
+        private static int startAggression = 1;
         private static int minimumAggression = -2; // +1
-        public static int maximumAggression = 20;
-        public static int aggressionHitIncrease = 5;
+        private static int maximumAggression = 20;
+        private static int aggressionIncrease = 5;
+        private static int aggressionDecrease = 1;
         // debug yes/no
         public static bool debugAggression = false;
         public static bool debugAggressionIncrease = false;
@@ -59,37 +60,27 @@ namespace NoAutoAggression
             }
         }
 
-        // is called by NAAMutantAnimatorControl when a mutant is hit
-        public static int StoreAggression(mutantAI myAI, int myAggression)
+        // is called to increase aggression on mutant death
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        public static void IncreaseAggression(mutantAI myAI)
         {
-            // aggression store
             if (aggressionStore.ContainsKey(AiName(myAI)))
             {
                 rwLock.EnterReadLock();
                 int storeAggression = (int)aggressionStore[AiName(myAI)];
                 rwLock.ExitReadLock();
-                if (storeAggression < myAggression)
+                if (storeAggression < maximumAggression)
                 {
+                    storeAggression += aggressionIncrease;
+                    if (storeAggression > maximumAggression)
+                    {
+                        storeAggression = maximumAggression;
+                    }
                     rwLock.EnterWriteLock();
-                    aggressionStore[AiName(myAI)] = myAggression;
+                    aggressionStore[AiName(myAI)] = storeAggression;
                     rwLock.ExitWriteLock();
-                    if (debugAggressionIncrease) ModAPI.Log.Write(AiName(myAI) + " saved this higher aggression: " + myAggression);
-                    return myAggression;
+                    if (debugAggressionIncrease) ModAPI.Log.Write(AiName(myAI) + " saved this higher aggression: " + storeAggression);
                 }
-                else
-                {
-                    if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " loaded this aggression: " + storeAggression);
-                    return storeAggression;
-
-                }
-            }
-            else
-            {
-                rwLock.EnterWriteLock();
-                aggressionStore[AiName(myAI)] = 0;
-                rwLock.ExitWriteLock();
-                if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this new aggression: 0");
-                return 0;
             }
         }
 
@@ -108,10 +99,10 @@ namespace NoAutoAggression
             else
             {
                 rwLock.EnterWriteLock();
-                aggressionStore[AiName(myAI)] = 0;
+                aggressionStore[AiName(myAI)] = startAggression;
                 rwLock.ExitWriteLock();
-                if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this new aggression: 0");
-                return 0;
+                if (debugAggression) ModAPI.Log.Write(AiName(myAI) + " saved this new aggression: " + startAggression);
+                return startAggression;
             }
         }
 
@@ -126,7 +117,7 @@ namespace NoAutoAggression
                 foreach (string key in keys)
                 {
                     rwLock.EnterReadLock();
-                    int tempInt = aggressionStore[key] - 1;
+                    int tempInt = aggressionStore[key] - aggressionDecrease;
                     rwLock.ExitReadLock();
                     if (tempInt > minimumAggression)
                     {
@@ -351,7 +342,8 @@ namespace NoAutoAggression
                 // send mutants away if they are friendly
                 if (base.setup.dayCycle.aggression <= 0)
                 {
-                    if (base.setup.animControl.fsmPlayerDist.Value < 30f)
+                    float runDistance = base.setup.dayCycle.aggression * 5 + 5;
+                    if (base.setup.animControl.fsmPlayerDist.Value < runDistance)
                     {
                         if (base.setup.pmCombat != null)
                         {
@@ -514,25 +506,24 @@ namespace NoAutoAggression
         }
     }
 
-    // event triggered when a mutant is hit
-    class NAAMutantAnimatorControl : mutantAnimatorControl
+    // trigger aggression increase if a mutant dies by player or trap (not stealthkill)
+    class NAAEnemyHealth : EnemyHealth
     {
-        // increase aggression if hit by player
-        public override void runGotHitScripts()
+        public override void Die()
         {
-            // run normal code
-            base.runGotHitScripts();
-            // increase aggression
-            if ((base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote")) && (!base.setup.dayCycle.creepy) && (!base.setup.search.fsmInCave.Value))
+            // check if player killed the mutant and increase aggression
+            if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
             {
-                base.setup.dayCycle.aggression += NoAutoAggression.aggressionHitIncrease;
-                if (base.setup.dayCycle.aggression > NoAutoAggression.maximumAggression)
+                if (base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote"))
                 {
-                    base.setup.dayCycle.aggression = NoAutoAggression.maximumAggression;
+                    if ((!base.doStealthKill) || (base.animator.GetBool("trapBool")))
+                    {
+                        NoAutoAggression.IncreaseAggression(base.setup.ai);
+                    }
                 }
-                base.setup.dayCycle.aggression = NoAutoAggression.StoreAggression(base.setup.ai, base.setup.dayCycle.aggression);
-                base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = base.setup.dayCycle.aggression;
             }
+            // original code
+            base.Die();
         }
     }
 }
