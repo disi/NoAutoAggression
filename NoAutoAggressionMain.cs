@@ -342,7 +342,7 @@ namespace NoAutoAggression
                 // send mutants away if they are friendly
                 if (base.setup.dayCycle.aggression <= 0)
                 {
-                    float runDistance = base.setup.dayCycle.aggression * 5 + 5;
+                    float runDistance = Mathf.Abs(base.setup.dayCycle.aggression * 5) + 5;
                     if (base.setup.animControl.fsmPlayerDist.Value < runDistance)
                     {
                         if (base.setup.pmCombat != null)
