@@ -24,10 +24,10 @@ namespace NoAutoAggression
         private static int aggressionDecrease = 1;
         // debug yes/no
         public static bool debugAggression = false;
-        public static bool debugAggressionIncrease = false;
+        public static bool debugAggressionIncrease = true;
         public static bool debugAttackChance = false;
         public static bool debugSaveSlot = false;
-        public static bool debugDeath = false;
+        public static bool debugDeath = true;
 
         [ModAPI.Attributes.ExecuteOnGameStart]
         static void AddMeToScene()
@@ -542,8 +542,9 @@ namespace NoAutoAggression
             {
                 if (base.deathFromTrap)
                 {
-                    NoAutoAggression.IncreaseAggression(base.setup.ai);
                     if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player trap!");
+                    NoAutoAggression.IncreaseAggression(base.setup.ai);
+                    base.deathFromTrap = false;
                 }
             }
         }
