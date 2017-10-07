@@ -24,10 +24,10 @@ namespace NoAutoAggression
         private static int aggressionDecrease = 1;
         // debug yes/no
         public static bool debugAggression = false;
-        public static bool debugAggressionIncrease = true;
+        public static bool debugAggressionIncrease = false;
         public static bool debugAttackChance = false;
         public static bool debugSaveSlot = false;
-        public static bool debugDeath = true;
+        public static bool debugDeath = false;
 
         [ModAPI.Attributes.ExecuteOnGameStart]
         static void AddMeToScene()
