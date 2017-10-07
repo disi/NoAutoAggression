@@ -514,12 +514,16 @@ namespace NoAutoAggression
             // check if player killed the mutant and increase aggression
             if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
             {
-                if (base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote"))
+                if (base.targetSwitcher.currentAttackerGo.CompareTag("Player") || base.targetSwitcher.currentAttackerGo.CompareTag("PlayerNet") || base.targetSwitcher.currentAttackerGo.CompareTag("PlayerRemote"))
                 {
-                    if ((!base.doStealthKill) || (base.animator.GetBool("trapBool")))
+                    if (!base.doStealthKill)
                     {
                         NoAutoAggression.IncreaseAggression(base.setup.ai);
                     }
+                }
+                else if (base.doStealthKill && base.setup.animator.GetBool("trapBool"))
+                {
+                    NoAutoAggression.IncreaseAggression(base.setup.ai);
                 }
             }
             // original code
@@ -528,16 +532,16 @@ namespace NoAutoAggression
 
         protected override void DieTrap(int type)
         {
+            // original code
+            base.DieTrap(type);
             // check if player-trap killed mutant and increase aggression
             if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
             {
-                    if (base.deathFromTrap)
-                    {
-                        NoAutoAggression.IncreaseAggression(base.setup.ai);
-                    }
+                if (base.deathFromTrap)
+                {
+                    NoAutoAggression.IncreaseAggression(base.setup.ai);
+                }
             }
-            // original code
-            base.DieTrap(type);
         }
     }
 }
