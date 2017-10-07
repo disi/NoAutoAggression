@@ -17,8 +17,8 @@ namespace NoAutoAggression
         private static string noAutoAggressionMainSavePath = "C:/Program Files (x86)/Steam/steamapps/common/The Forest/Mods/NoAutoAggression/";
         private static string noAutoAggressionSaveSlot;
         // static values
-        private static int startAggression = 1;
-        private static int minimumAggression = -2; // +1
+        private static int startAggression = 2;
+        private static int minimumAggression = -2;
         private static int maximumAggression = 20;
         private static int aggressionIncrease = 5;
         private static int aggressionDecrease = 1;
@@ -27,6 +27,7 @@ namespace NoAutoAggression
         public static bool debugAggressionIncrease = false;
         public static bool debugAttackChance = false;
         public static bool debugSaveSlot = false;
+        public static bool debugDeath = false;
 
         [ModAPI.Attributes.ExecuteOnGameStart]
         static void AddMeToScene()
@@ -119,7 +120,7 @@ namespace NoAutoAggression
                     rwLock.EnterReadLock();
                     int tempInt = aggressionStore[key] - aggressionDecrease;
                     rwLock.ExitReadLock();
-                    if (tempInt > minimumAggression)
+                    if (tempInt >= minimumAggression)
                     {
                         rwLock.EnterWriteLock();
                         aggressionStore[key] = tempInt;
@@ -518,12 +519,14 @@ namespace NoAutoAggression
                 {
                     if (!base.doStealthKill)
                     {
+                        if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player weapon!");
                         NoAutoAggression.IncreaseAggression(base.setup.ai);
                     }
-                }
-                else if (base.doStealthKill && base.setup.animator.GetBool("trapBool"))
-                {
-                    NoAutoAggression.IncreaseAggression(base.setup.ai);
+                    else if (base.doStealthKill && base.setup.animator.GetBool("trapBool"))
+                    {
+                        if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player stealth kill in trap!");
+                        NoAutoAggression.IncreaseAggression(base.setup.ai);
+                    }
                 }
             }
             // original code
@@ -540,6 +543,7 @@ namespace NoAutoAggression
                 if (base.deathFromTrap)
                 {
                     NoAutoAggression.IncreaseAggression(base.setup.ai);
+                    if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player trap!");
                 }
             }
         }
