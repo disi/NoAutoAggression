@@ -295,219 +295,83 @@ namespace NoAutoAggression
             if ((!base.setup.search.fsmInCave.Value) && (!base.creepy))
             {
                 base.aggression = NoAutoAggression.GetAggression(base.ai, base.aggression);
+                bool attackUpdate = (base.fsmAggresion.Value != base.aggression);
                 base.fsmAggresion.Value = base.aggression;
+                this.UpdateBehaviour(attackUpdate);
             }
         }
-    }
 
-    // several tasks/behaviour settings for mutants
-    class NAAMutantAiManager : mutantAiManager
-    {
         // to take out all the auto aggression
-        private void UpdateAttackChance()
+        protected void UpdateBehaviour(bool attackUpdate)
         {
-            if ((!base.searchFunctions.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
+            // FSM Data auslesen
+            /*
+            //Fsm myFSM = base.setup.pmBrain.Fsm;
+            //Fsm myFSM = base.setup.pmEncounter.Fsm;
+            //Fsm myFSM = base.setup.pmCombat.Fsm;
+            Fsm myFSM = base.setup.pmSleep.Fsm;
+            ModAPI.Log.Write(myFSM.Name + " FSM Owner:" + myFSM.Owner.name);
+            foreach (var item in myFSM.Events)
             {
-                // FSM Data auslesen
-                /*
-                //Fsm myFSM = base.setup.pmBrain.Fsm;
-                //Fsm myFSM = base.setup.pmEncounter.Fsm;
-                //Fsm myFSM = base.setup.pmCombat.Fsm;
-                Fsm myFSM = base.setup.pmSleep.Fsm;
-                ModAPI.Log.Write(myFSM.Name + " FSM Owner:" + myFSM.Owner.name);
-                foreach (var item in myFSM.Events)
-                {
-                    ModAPI.Log.Write(myFSM.Name + " FSM Events:" + item.Name);
-                }
-                foreach (var item in myFSM.States)
-                {
-                    ModAPI.Log.Write(myFSM.Name + " FSM States:" + item.Name);
-                }
-                foreach (var item in myFSM.GlobalTransitions)
-                {
-                    ModAPI.Log.Write(myFSM.Name + " FSM Transitions:" + item.EventName);
-                }
-                ModAPI.Log.Write("----------------------------------------------");
-                */
-                // set aggression
-                base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
-                base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = base.setup.dayCycle.aggression;
+                ModAPI.Log.Write(myFSM.Name + " FSM Events:" + item.Name);
+            }
+            foreach (var item in myFSM.States)
+            {
+                ModAPI.Log.Write(myFSM.Name + " FSM States:" + item.Name);
+            }
+            foreach (var item in myFSM.GlobalTransitions)
+            {
+                ModAPI.Log.Write(myFSM.Name + " FSM Transitions:" + item.EventName);
+            }
+            ModAPI.Log.Write("----------------------------------------------");
+            */
+            // reset aggression
+            if (attackUpdate)
+            {
                 // calc attackchance
-                int calcAggression = Mathf.Min(base.setup.dayCycle.aggression, 0);
-                base.fsmAttackChance.Value = ((calcAggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
-                base.fsmAttack = ((calcAggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
+                int calcAggression = Mathf.Abs(Mathf.Clamp(base.aggression, 0, int.MaxValue));
+                base.setup.aiManager.fsmAttackChance.Value = ((calcAggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
+                base.setup.aiManager.fsmAttack = ((calcAggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
                 // set random behaviour
-                base.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.fsmAttackChance.Value), 0.1f, 2f);
-                base.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.fsmAttackChance.Value), 0.1f, 2f);
-                base.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.fsmAttackChance.Value), 0.1f, 2f);
-                base.fsmRunAwayChance.Value = Mathf.Clamp(3f - base.fsmAttackChance.Value, 0.1f, 3f);
-                base.fsmBackAway.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0.1f, 2f);
-                base.fsmDisengage.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0.1f, 2f);
-                if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
-                // send mutants away if they are friendly
-                if (base.setup.dayCycle.aggression <= 0)
+                base.setup.aiManager.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.setup.aiManager.fsmAttackChance.Value), 0.1f, 2f);
+                base.setup.aiManager.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.setup.aiManager.fsmAttackChance.Value), 0.1f, 2f);
+                base.setup.aiManager.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.setup.aiManager.fsmAttackChance.Value), 0.1f, 2f);
+                base.setup.aiManager.fsmRunAwayChance.Value = Mathf.Clamp(3f - base.setup.aiManager.fsmAttackChance.Value, 0.1f, 3f);
+                base.setup.aiManager.fsmBackAway.Value = Mathf.Clamp(2f - base.setup.aiManager.fsmAttackChance.Value, 0.1f, 2f);
+                base.setup.aiManager.fsmDisengage.Value = Mathf.Clamp(2f - base.setup.aiManager.fsmAttackChance.Value, 0.1f, 2f);
+                if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write(base.setup.ai.name + " set this attackchance: " + base.setup.aiManager.fsmAttackChance.Value.ToString("N3"));
+            }
+            // send mutants away if they are friendly
+            if (base.aggression <= 0)
+            {
+                float runDistance = Mathf.Abs(base.aggression * 5) + 5f;
+                if (base.setup.animControl.fsmPlayerDist.Value < runDistance)
                 {
-                    float runDistance = Mathf.Abs(base.setup.dayCycle.aggression * 5) + 5f;
-                    if (base.setup.animControl.fsmPlayerDist.Value < runDistance)
+                    if (base.setup.pmCombat != null)
                     {
-                        if (base.setup.pmCombat != null)
+                        if (base.setup.ai.leader)
                         {
-                            if (base.setup.ai.leader)
-                            {
-                                base.setup.pmCombat.SendEvent("goToRunAway");
-                            }
-                            else
-                            {
-                                base.setup.pmCombat.SendEvent("goToLeader");
-                            }
-                        }
-                        if (base.setup.pmEncounter != null)
-                        {
-                            base.setup.pmEncounter.SendEvent("FINISHED");
-                        }
-                        if ((base.ai.skinned) || (base.ai.femaleSkinny) || (base.ai.maleSkinny))
-                        {
-                            base.setup.pmBrain.SendEvent("toSetFearful");
+                            base.setup.pmCombat.SendEvent("goToRunAway");
                         }
                         else
                         {
-                            base.setup.pmBrain.SendEvent("toSetPassive");
+                            base.setup.pmCombat.SendEvent("goToLeader");
                         }
+                    }
+                    if (base.setup.pmEncounter != null)
+                    {
+                        base.setup.pmEncounter.SendEvent("FINISHED");
+                    }
+                    if ((base.ai.skinned) || (base.ai.femaleSkinny) || (base.ai.maleSkinny))
+                    {
+                        base.setup.pmBrain.SendEvent("toSetFearful");
+                    }
+                    else
+                    {
+                        base.setup.pmBrain.SendEvent("toSetPassive");
                     }
                 }
             }
-        }
-
-        public override void setAggressiveCombat()
-        {
-            base.setAggressiveCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setCaveCombat()
-        {
-            base.setCaveCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setCaveSearching()
-        {
-            base.setCaveSearching();
-            UpdateAttackChance();
-        }
-
-        public override void setDaySearching()
-        {
-            base.setDaySearching();
-            UpdateAttackChance();
-        }
-
-        public override void setDayStalking()
-        {
-            base.setDayStalking();
-            UpdateAttackChance();
-        }
-
-        public override void setDefaultCombat()
-        {
-            base.setDefaultCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setDefaultSearching()
-        {
-            base.setDefaultSearching();
-            UpdateAttackChance();
-        }
-
-        public override void setDefaultStalking()
-        {
-            base.setDefaultStalking();
-            UpdateAttackChance();
-        }
-
-        public override void setDefensiveCombat()
-        {
-            base.setDefensiveCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setFiremanCombat()
-        {
-            base.setFiremanCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setOnStructureCombat()
-        {
-            base.setOnStructureCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setPlaneCrashCombat()
-        {
-            base.setPlaneCrashCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setPlaneCrashStalking()
-        {
-            base.setPlaneCrashStalking();
-            UpdateAttackChance();
-        }
-
-        public override void setSkinnedMutantCombat()
-        {
-            base.setSkinnedMutantCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setSkinnyAggressiveCombat()
-        {
-            base.setSkinnyAggressiveCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setSkinnyCombat()
-        {
-            base.setSkinnyCombat();
-            UpdateAttackChance();
-        }
-
-        public override void setSkinnyDaySearching()
-        {
-            base.setSkinnyDaySearching();
-            UpdateAttackChance();
-        }
-
-        public override void setSkinnyNightSearching()
-        {
-            base.setSkinnyNightSearching();
-            UpdateAttackChance();
-        }
-
-        public override void setSkinnyNightStalking()
-        {
-            base.setSkinnyNightStalking();
-            UpdateAttackChance();
-        }
-
-        public override void setSkinnyStalking()
-        {
-            base.setSkinnyStalking();
-            UpdateAttackChance();
-        }
-
-        public override void setTestSearching()
-        {
-            base.setTestSearching();
-            UpdateAttackChance();
-        }
-
-        public override void setTestStalking()
-        {
-            base.setTestStalking();
-            UpdateAttackChance();
         }
     }
 
