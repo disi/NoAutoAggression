@@ -337,17 +337,17 @@ namespace NoAutoAggression
                 base.fsmAttackChance.Value = ((calcAggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
                 base.fsmAttack = ((calcAggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
                 // set random behaviour
-                base.fsmRunAwayChance.Value = Mathf.Clamp(3f - base.fsmAttackChance.Value, 0f, 3f);
-                base.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0f, 2f);
-                base.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0f, 2f);
-                base.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0f, 2f);
-                base.fsmBackAway.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0f, 2f);
-                base.fsmDisengage.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0f, 2f);
+                base.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.fsmAttackChance.Value), 0.1f, 2f);
+                base.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.fsmAttackChance.Value), 0.1f, 2f);
+                base.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.fsmAttackChance.Value), 0.1f, 2f);
+                base.fsmRunAwayChance.Value = Mathf.Clamp(3f - base.fsmAttackChance.Value, 0.1f, 3f);
+                base.fsmBackAway.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0.1f, 2f);
+                base.fsmDisengage.Value = Mathf.Clamp(2f - base.fsmAttackChance.Value, 0.1f, 2f);
                 if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write("Mutant set this attackchance: " + base.fsmAttackChance.Value.ToString("N3"));
                 // send mutants away if they are friendly
                 if (base.setup.dayCycle.aggression <= 0)
                 {
-                    float runDistance = Mathf.Abs(base.setup.dayCycle.aggression * 5) + 5;
+                    float runDistance = Mathf.Abs(base.setup.dayCycle.aggression * 5) + 5f;
                     if (base.setup.animControl.fsmPlayerDist.Value < runDistance)
                     {
                         if (base.setup.pmCombat != null)
