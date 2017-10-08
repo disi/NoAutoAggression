@@ -14,7 +14,7 @@ namespace NoAutoAggression
         private static Dictionary<string, int> aggressionStore;
         private static ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim();
         private static int mutantDayCycleDay = Clock.Day;
-        private static string noAutoAggressionMainSavePath = "C:/Program Files (x86)/Steam/steamapps/common/The Forest/Mods/NoAutoAggression/";
+        private static string noAutoAggressionMainSavePath = "Mods/NoAutoAggression/";
         private static string noAutoAggressionSaveSlot;
         // static values
         private static int startAggression = 2;
