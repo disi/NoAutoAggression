@@ -329,10 +329,14 @@ namespace NoAutoAggression
                 }
                 ModAPI.Log.Write("----------------------------------------------");
                 */
+                // set aggression
                 base.setup.dayCycle.aggression = NoAutoAggression.GetAggression(base.setup.ai, base.setup.dayCycle.aggression);
                 base.setup.pmBrain.FsmVariables.GetFsmInt("aggression").Value = base.setup.dayCycle.aggression;
-                base.fsmAttackChance.Value = ((base.setup.dayCycle.aggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
-                base.fsmAttack = ((base.setup.dayCycle.aggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
+                // calc attackchance
+                int calcAggression = Mathf.Min(base.setup.dayCycle.aggression, 0);
+                base.fsmAttackChance.Value = ((calcAggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
+                base.fsmAttack = ((calcAggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
+                // set random behaviour
                 base.fsmRunAwayChance.Value = Mathf.Clamp(3f - base.fsmAttackChance.Value, 0f, 3f);
                 base.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0f, 2f);
                 base.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0f, base.fsmAttackChance.Value), 0f, 2f);
