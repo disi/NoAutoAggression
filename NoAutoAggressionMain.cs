@@ -381,7 +381,7 @@ namespace NoAutoAggression
         public override void Die()
         {
             // check if player killed the mutant and increase aggression
-            if (base.setup)
+            if (base.targetSwitcher.currentAttackerGo)
             {
                 if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
                 {
@@ -408,15 +408,12 @@ namespace NoAutoAggression
         {
             // check if player-trap killed mutant and increase aggression
             // types: 0 = largeSpike, 1 = largeDeadfall), 2 = largeNoose, 3 = largeSwingingRock
-            if (base.setup)
+            if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
             {
-                if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
+                if ((base.deathFromTrap) && ((type == 0) || (type == 1) || (type == 3)))
                 {
-                    if ((base.deathFromTrap) && ((type == 0) || (type == 1) || (type == 3)))
-                    {
-                        if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player trap!");
-                        NoAutoAggression.IncreaseAggression(base.setup.ai);
-                    }
+                    if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player trap!");
+                    NoAutoAggression.IncreaseAggression(base.setup.ai);
                 }
             }
             // original code
