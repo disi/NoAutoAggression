@@ -24,10 +24,10 @@ namespace NoAutoAggression
         private static int aggressionDecrease = 1;
         // debug yes/no
         public static bool debugAggression = false;
-        public static bool debugAggressionIncrease = false;
+        public static bool debugAggressionIncrease = true;
         public static bool debugAttackChance = false;
         public static bool debugSaveSlot = false;
-        public static bool debugDeath = false;
+        public static bool debugDeath = true;
 
         [ModAPI.Attributes.ExecuteOnGameStart]
         static void AddMeToScene()
@@ -263,7 +263,7 @@ namespace NoAutoAggression
     // single instance to manage the mutant spawns
     class NAASpawnManager : mutantSpawnManager
     {
-        private void OnEnable()
+        protected void OnEnable()
         {
             // create aggressionStore - potential override in future game versions
             NoAutoAggression.CreateAggressionStore();
@@ -277,7 +277,7 @@ namespace NoAutoAggression
             NoAutoAggression.LowerAggression();
         }
 
-        private void OnDisable()
+        protected void OnDisable()
         {
             // save aggression to file - potential override in future game versions
             NoAutoAggression.SaveAggression();
@@ -381,19 +381,22 @@ namespace NoAutoAggression
         public override void Die()
         {
             // check if player killed the mutant and increase aggression
-            if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
+            if (base.setup)
             {
-                if (base.targetSwitcher.currentAttackerGo.CompareTag("Player") || base.targetSwitcher.currentAttackerGo.CompareTag("PlayerNet") || base.targetSwitcher.currentAttackerGo.CompareTag("PlayerRemote"))
+                if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
                 {
-                    if (!base.doStealthKill)
+                    if (base.targetSwitcher.currentAttackerGo.CompareTag("Player") || base.targetSwitcher.currentAttackerGo.CompareTag("PlayerNet") || base.targetSwitcher.currentAttackerGo.CompareTag("PlayerRemote"))
                     {
-                        if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player weapon!");
-                        NoAutoAggression.IncreaseAggression(base.setup.ai);
-                    }
-                    else if (base.doStealthKill && base.setup.animator.GetBool("trapBool"))
-                    {
-                        if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player stealth kill in trap!");
-                        NoAutoAggression.IncreaseAggression(base.setup.ai);
+                        if (!base.doStealthKill)
+                        {
+                            if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player weapon!");
+                            NoAutoAggression.IncreaseAggression(base.setup.ai);
+                        }
+                        else if (base.doStealthKill && base.setup.animator.GetBool("trapBool"))
+                        {
+                            if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player stealth kill in trap!");
+                            NoAutoAggression.IncreaseAggression(base.setup.ai);
+                        }
                     }
                 }
             }
@@ -403,19 +406,23 @@ namespace NoAutoAggression
 
         protected override void DieTrap(int type)
         {
-            // original code
-            base.DieTrap(type);
             // check if player-trap killed mutant and increase aggression
-            if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
+            // types: 0 = largeSpike, 1 = largeDeadfall), 2 = largeNoose, 3 = largeSwingingRock
+            if (base.setup)
             {
-                if (base.deathFromTrap)
+                if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
                 {
-                    if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player trap!");
-                    NoAutoAggression.IncreaseAggression(base.setup.ai);
-                    base.deathFromTrap = false;
+                    if ((base.deathFromTrap) && ((type == 0) || (type == 1) || (type == 3)))
+                    {
+                        if (NoAutoAggression.debugDeath) ModAPI.Log.Write("Death from player trap!");
+                        NoAutoAggression.IncreaseAggression(base.setup.ai);
+                    }
                 }
             }
+            // original code
+            base.DieTrap(type);
         }
     }
 }
+
 
