@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Xml.Serialization;
 using TheForest.Utils.Settings;
 using System.Threading;
+using System.Collections;
+using System.Diagnostics;
 
 namespace NoAutoAggression
 {
@@ -17,11 +19,12 @@ namespace NoAutoAggression
         private static string noAutoAggressionMainSavePath = "Mods/NoAutoAggression/";
         private static string noAutoAggressionSaveSlot;
         // static values
-        private static int startAggression = 2;
-        private static int minimumAggression = -2;
-        private static int maximumAggression = 20;
-        private static int aggressionIncrease = 5;
-        private static int aggressionDecrease = 1;
+        public static int startAggression = 2;
+        public static int minimumAggression = -4;
+        public static int behaviourChangeAggression = -1;
+        public static int maximumAggression = 20;
+        public static int aggressionIncrease = 5;
+        public static int aggressionDecrease = 1;
         // debug yes/no
         public static bool debugAggression = false;
         public static bool debugAggressionIncrease = false;
@@ -341,34 +344,45 @@ namespace NoAutoAggression
                 base.setup.aiManager.fsmDisengage.Value = Mathf.Clamp(2f - base.setup.aiManager.fsmAttackChance.Value, 0.1f, 2f);
                 if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write(base.setup.ai.name + " set this attackchance: " + base.setup.aiManager.fsmAttackChance.Value.ToString("N3"));
             }
-            // send mutants away if they are friendly
-            if (base.aggression <= 0)
+            // if aggression is at minimum, set player target as on rope (not attack), reset any structures to attack
+            if (base.aggression == NoAutoAggression.minimumAggression)
             {
-                float runDistance = Mathf.Abs(base.aggression * 5) + 5f;
-                if (base.setup.animControl.fsmPlayerDist.Value < runDistance)
+                if (base.setup.search.currentTarget == LocalPlayer.GameObject)
                 {
-                    if (base.setup.pmCombat != null)
+                    this.setup.search.targetSetup.onRope = true;
+                }
+                if (base.setup.search.currentStructureGo != null)
+                {
+                    base.setup.search.currentStructureGo = null;
+                    this.setup.pmCombat.FsmVariables.GetFsmGameObject("structureGo").Value = null;
+                }
+            }
+            // set behaviour if not minimum aggression
+            if (base.aggression <= NoAutoAggression.behaviourChangeAggression)
+            {
+                base.setup.pmCombat.FsmVariables.GetFsmBool("freakoutBool").Value = false;
+                if (base.setup.pmCombat != null)
+                {
+                    float runDistance = Mathf.Abs(base.aggression * 5) + 5f;
+                    if (base.setup.animControl.fsmPlayerDist.Value < runDistance)
                     {
                         if (base.setup.ai.leader)
                         {
-                            base.setup.pmCombat.SendEvent("goToRunAway");
+                            base.setup.pmCombat.SendEvent("goToGuard1");
                         }
                         else
                         {
                             base.setup.pmCombat.SendEvent("goToLeader");
+                            base.setup.pmCombat.SendEvent("toSetPassive");
+                        }
+                        if ((base.ai.skinned) || (base.ai.femaleSkinny) || (base.ai.maleSkinny))
+                        {
+                            base.setup.pmBrain.SendEvent("toSetFearful");
                         }
                     }
                     if (base.setup.pmEncounter != null)
                     {
-                        base.setup.pmEncounter.SendEvent("FINISHED");
-                    }
-                    if ((base.ai.skinned) || (base.ai.femaleSkinny) || (base.ai.maleSkinny))
-                    {
-                        base.setup.pmBrain.SendEvent("toSetFearful");
-                    }
-                    else
-                    {
-                        base.setup.pmBrain.SendEvent("toSetPassive");
+                        base.setup.pmEncounter.SendEvent("toResetEncounter");
                     }
                 }
             }
@@ -381,7 +395,7 @@ namespace NoAutoAggression
         public override void Die()
         {
             // check if player killed the mutant and increase aggression
-            if (base.targetSwitcher.currentAttackerGo)
+            if (base.targetSwitcher.currentAttackerGo != null)
             {
                 if ((!base.setup.search.fsmInCave.Value) && (!base.setup.dayCycle.creepy))
                 {
