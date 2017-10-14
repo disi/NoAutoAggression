@@ -347,14 +347,14 @@ namespace NoAutoAggression
             // if aggression is at minimum, set player target as on rope (not attack), reset any structures to attack
             if (base.aggression == NoAutoAggression.minimumAggression)
             {
-                if (base.setup.search.currentTarget == LocalPlayer.GameObject)
+                if (base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote"))
                 {
-                    this.setup.search.targetSetup.onRope = true;
+                    base.setup.search.targetSetup.onRope = true;
                 }
                 if (base.setup.search.currentStructureGo != null)
                 {
                     base.setup.search.currentStructureGo = null;
-                    this.setup.pmCombat.FsmVariables.GetFsmGameObject("structureGo").Value = null;
+                    base.setup.pmCombat.FsmVariables.GetFsmGameObject("structureGo").Value = null;
                 }
             }
             // set behaviour if not minimum aggression
