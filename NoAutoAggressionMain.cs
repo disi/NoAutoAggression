@@ -8,6 +8,7 @@ using TheForest.Utils.Settings;
 using System.Threading;
 using System.Collections;
 using System.Diagnostics;
+using HutongGames.PlayMaker;
 
 namespace NoAutoAggression
 {
@@ -336,20 +337,26 @@ namespace NoAutoAggression
                 base.setup.aiManager.fsmAttackChance.Value = ((calcAggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
                 base.setup.aiManager.fsmAttack = ((calcAggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
                 // set random behaviour
-                base.setup.aiManager.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.setup.aiManager.fsmAttackChance.Value), 0.1f, 2f);
-                base.setup.aiManager.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.setup.aiManager.fsmAttackChance.Value), 0.1f, 2f);
-                base.setup.aiManager.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.1f, base.setup.aiManager.fsmAttackChance.Value), 0.1f, 2f);
-                base.setup.aiManager.fsmRunAwayChance.Value = Mathf.Clamp(3f - base.setup.aiManager.fsmAttackChance.Value, 0.1f, 3f);
-                base.setup.aiManager.fsmBackAway.Value = Mathf.Clamp(2f - base.setup.aiManager.fsmAttackChance.Value, 0.1f, 2f);
-                base.setup.aiManager.fsmDisengage.Value = Mathf.Clamp(2f - base.setup.aiManager.fsmAttackChance.Value, 0.1f, 2f);
+                base.setup.aiManager.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.0f, base.setup.aiManager.fsmAttackChance.Value), 0.0f, 2f);
+                base.setup.aiManager.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0.0f, base.setup.aiManager.fsmAttackChance.Value), 0.0f, 2f);
+                base.setup.aiManager.fsmScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.0f, base.setup.aiManager.fsmAttackChance.Value), 0.0f, 2f);
+                base.setup.aiManager.fsmRunAwayChance.Value = Mathf.Clamp(3f - base.setup.aiManager.fsmAttackChance.Value, 0.0f, 3f);
+                base.setup.aiManager.fsmBackAway.Value = Mathf.Clamp(2f - base.setup.aiManager.fsmAttackChance.Value, 0.0f, 2f);
+                base.setup.aiManager.fsmDisengage.Value = Mathf.Clamp(2f - base.setup.aiManager.fsmAttackChance.Value, 0.0f, 2f);
                 if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write(base.setup.ai.name + " set this attackchance: " + base.setup.aiManager.fsmAttackChance.Value.ToString("N3"));
             }
             // if aggression is at minimum, set player target as on rope (not attack), reset any structures to attack
             if (base.aggression == NoAutoAggression.minimumAggression)
             {
-                if (base.setup.search.currentTarget.CompareTag("Player") || base.setup.search.currentTarget.CompareTag("PlayerNet") || base.setup.search.currentTarget.CompareTag("PlayerRemote"))
+                if (base.setup.search.targetSetup.CompareTag("Player") || base.setup.search.targetSetup.CompareTag("PlayerNet") || base.setup.search.targetSetup.CompareTag("PlayerRemote"))
                 {
-                    base.setup.search.targetSetup.onRope = true;
+                    if (base.setup.pmCombat != null)
+                    {
+                        base.setup.ai.toStop();
+                        base.setup.search.targetSetup.onRope = true;
+                        base.setup.pmCombat.SendEvent("toWander");
+                        base.setup.pmCombat.SendEvent("toTargetLost");
+                    }
                 }
                 if (base.setup.search.currentStructureGo != null)
                 {
