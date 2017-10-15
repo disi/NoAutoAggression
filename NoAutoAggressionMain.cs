@@ -466,16 +466,24 @@ namespace NoAutoAggression
                                 base.StopCoroutine("toDisable");
                                 base.StopCoroutine("enableAwareOfPlayer");
                                 base.playerAware = false;
-                                // set everything to their home cave
-                                if (base.fsmCaveEntrance.Value != null)
+                                // set new target
+                                if (base.lastTarget != base.currentTarget)
                                 {
-                                    base.currentTarget = base.fsmCaveEntrance.Value;
-                                    base.setup.ai.target = base.currentTarget.transform;
+                                    base.currentTarget = base.lastTarget;
                                 }
                                 else
                                 {
-                                    base.currentTarget = null;
+                                    if (base.fsmCaveEntrance.Value != null)
+                                    {
+                                        base.currentTarget = base.fsmCaveEntrance.Value;
+                                        base.setup.ai.target = base.currentTarget.transform;
+                                    }
+                                    else
+                                    {
+                                        base.currentTarget = null;
+                                    }
                                 }
+                                base.fsmCurrentTargetGo.Value = base.currentTarget;
                                 base.lastTarget = base.currentTarget;
                             }
                         }
