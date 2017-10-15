@@ -335,7 +335,8 @@ namespace NoAutoAggression
                 // calc attackchance
                 int calcAggression = Mathf.Abs(Mathf.Clamp(base.aggression, 0, int.MaxValue));
                 base.setup.aiManager.fsmAttackChance.Value = ((calcAggression * GameSettings.Ai.aiAttackChanceRatio) / 10f);
-                base.setup.aiManager.fsmAttack = ((calcAggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
+                base.setup.aiManager.fsmAttack.Value = ((calcAggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
+                base.setup.aiManager.fsmSearchToEncounter.Value = ((calcAggression * GameSettings.Ai.aiFollowUpAfterAttackRatio) / 10f);
                 // set random behaviour
                 base.setup.aiManager.fsmRunTowardsScream.Value = Mathf.Clamp(UnityEngine.Random.Range(0.0f, base.setup.aiManager.fsmAttackChance.Value), 0.0f, 2f);
                 base.setup.aiManager.fsmScreamRunTowards.Value = Mathf.Clamp(UnityEngine.Random.Range(0.0f, base.setup.aiManager.fsmAttackChance.Value), 0.0f, 2f);
@@ -345,18 +346,12 @@ namespace NoAutoAggression
                 base.setup.aiManager.fsmDisengage.Value = Mathf.Clamp(2f - base.setup.aiManager.fsmAttackChance.Value, 0.0f, 2f);
                 if (NoAutoAggression.debugAttackChance) ModAPI.Log.Write(base.setup.ai.name + " set this attackchance: " + base.setup.aiManager.fsmAttackChance.Value.ToString("N3"));
             }
-            // if aggression is at minimum, set player target as on rope (not attack), reset any structures to attack
+            // if aggression is at minimum, disable search for player and reset any structures to attack
             if (base.aggression == NoAutoAggression.minimumAggression)
             {
-                if (base.setup.search.targetSetup.CompareTag("Player") || base.setup.search.targetSetup.CompareTag("PlayerNet") || base.setup.search.targetSetup.CompareTag("PlayerRemote"))
+                if (base.aiManager.IsInvoking("setupPlayerSearchValues"))
                 {
-                    if (base.setup.pmCombat != null)
-                    {
-                        base.setup.ai.toStop();
-                        base.setup.search.targetSetup.onRope = true;
-                        base.setup.pmCombat.SendEvent("toWander");
-                        base.setup.pmCombat.SendEvent("toTargetLost");
-                    }
+                    base.aiManager.CancelInvoke("setupPlayerSearchValues");
                 }
                 if (base.setup.search.currentStructureGo != null)
                 {
@@ -375,6 +370,7 @@ namespace NoAutoAggression
                     {
                         if (base.setup.ai.leader)
                         {
+                            base.setup.pmCombat.StopAllCoroutines();
                             base.setup.pmCombat.SendEvent("goToGuard1");
                         }
                         else
@@ -439,6 +435,53 @@ namespace NoAutoAggression
             }
             // original code
             base.DieTrap(type);
+        }
+    }
+
+    class NAAMutantSearchFunctions : mutantSearchFunctions
+    {
+        protected override void setNewTarget()
+        {
+            // original code
+            base.setNewTarget();
+            // check if player is current target
+            if (base.setup.dayCycle)
+            {
+                if ((!base.setup.dayCycle.creepy) && (!base.fsmInCave.Value))
+                {
+                    if (base.setup.dayCycle.aggression == NoAutoAggression.minimumAggression)
+                    {
+                        if (base.currentTarget != null)
+                        {
+                            if (base.currentTarget.CompareTag("Player") || base.currentTarget.CompareTag("PlayerNet") || base.currentTarget.CompareTag("PlayerRemote"))
+                            {
+                                // remove player from target pool
+                                if (Scene.SceneTracker.allVisTargets.Contains(base.currentTarget))
+                                {
+                                    Scene.SceneTracker.removeFromVisible(base.currentTarget);
+                                }
+                                base.trackCounter = 0;
+                                base.targetSetup = null;
+                                base.StopCoroutine("toTrack");
+                                base.StopCoroutine("toDisable");
+                                base.StopCoroutine("enableAwareOfPlayer");
+                                base.playerAware = false;
+                                // set everything to their home cave
+                                if (base.fsmCaveEntrance.Value != null)
+                                {
+                                    base.currentTarget = base.fsmCaveEntrance.Value;
+                                    base.setup.ai.target = base.currentTarget.transform;
+                                }
+                                else
+                                {
+                                    base.currentTarget = null;
+                                }
+                                base.lastTarget = base.currentTarget;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
