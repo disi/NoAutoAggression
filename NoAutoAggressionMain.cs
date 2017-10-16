@@ -439,10 +439,8 @@ namespace NoAutoAggression
 
     class NAAMutantSearchFunctions : mutantSearchFunctions
     {
-        protected override void setNewTarget()
+        protected override void Update()
         {
-            // original code
-            base.setNewTarget();
             // check if player is current target
             if (!LocalPlayer.IsInCaves)
             {
@@ -456,17 +454,13 @@ namespace NoAutoAggression
                             {
                                 if (base.currentTarget.CompareTag("Player") || base.currentTarget.CompareTag("PlayerNet") || base.currentTarget.CompareTag("PlayerRemote"))
                                 {
-                                    // remove player from target pool
-                                    if (base.setup.sceneInfo.allVisTargets.Contains(base.currentTarget))
-                                    {
-                                        base.setup.sceneInfo.removeFromVisible(base.currentTarget);
-                                    }
-                                    base.trackCounter = 0;
-                                    base.targetSetup = null;
                                     base.StopCoroutine("toTrack");
                                     base.StopCoroutine("toDisable");
                                     base.StopCoroutine("enableAwareOfPlayer");
                                     base.playerAware = false;
+                                    // make him/her blind
+                                    base.setLongVisRange = 0f;
+                                    base.setCloseVisRange = 0f;
                                     // set new target
                                     if (base.setup.pmCombat)
                                         if (base.setup.ai.leader)
@@ -496,6 +490,8 @@ namespace NoAutoAggression
                     }
                 }
             }
+            // original code
+            base.Update();
         }
     }
 }
